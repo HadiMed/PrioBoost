@@ -35,6 +35,9 @@ NTSTATUS PrioBoostCreateClose(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIRP Irp) {
 _Use_decl_annotations_
 NTSTATUS PriorityBoosterDeviceControl(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIRP Irp) {
 
+	// DeviceObject not needed here 
+	UNREFERENCED_PARAMETER(DeviceObject);
+
 	//get the IO_STACK_LOCATION 
 	PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp); 
 
@@ -95,8 +98,22 @@ NTSTATUS PriorityBoosterDeviceControl(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIR
 }
 
 
+void unload(_In_ PDRIVER_OBJECT DriverObject) {
+
+	UNICODE_STRING symLink = RTL_CONSTANT_STRING(L"\\??\\PrioBoost");
+
+	// Delete Symbolic link
+	IoDeleteSymbolicLink(&symLink);
+
+	// Delete device object 
+	IoDeleteDevice(DriverObject->DeviceObject);
+
+}
+
 
 NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING RegistryPath) {
+
+	UNREFERENCED_PARAMETER(RegistryPath); 
 	
 	// Setting up the Unload routine
 	DriverObject->DriverUnload = unload ;
@@ -145,14 +162,4 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING Regi
 
 
 
-void unload(_In_ PDRIVER_OBJECT DriverObject) {
 
-	UNICODE_STRING symLink = RTL_CONSTANT_STRING(L"\\??\\PrioBoost"); 
-	
-	// Delete Symbolic link
-	IoDeleteSymbolicLink(&symLink); 
-
-	// Delete device object 
-	IoDeleteDevice(DriverObject->DeviceObject); 
-
-}
