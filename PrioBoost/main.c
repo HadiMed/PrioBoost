@@ -1,11 +1,14 @@
+#include <ntifs.h>
 #include <ntddk.h>
 #include "Common.h"
+
 
 #define PRIORITY_DEVICE 0x8000
 
 // Setting up the control code
 #define IOCTL_SET_PRIORITY CTL_CODE(PRIORITY_DEVICE , 0x800 ,\
 METHOD_NEITHER , FILE_ANY_ACCESS)
+
 
 //Prototypes
 NTSTATUS PrioBoostCreateClose(_In_ PDEVICE_OBJECT DeviceObject , _In_ PIRP Irp); 
@@ -32,6 +35,62 @@ NTSTATUS PrioBoostCreateClose(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIRP Irp) {
 _Use_decl_annotations_
 NTSTATUS PriorityBoosterDeviceControl(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIRP Irp) {
 
+	//get the IO_STACK_LOCATION 
+	PIO_STACK_LOCATION stack = IoGetCurrentIrpStackLocation(Irp); 
+
+	NTSTATUS status = STATUS_SUCCESS; 
+
+	switch (stack->Parameters.DeviceIoControl.IoControlCode) {
+		
+		case IOCTL_SET_PRIORITY: // Main Functionality here 
+
+			if (stack->Parameters.DeviceIoControl.InputBufferLength < sizeof(ThreadData) ) { // Checking if the buffer is large to contain our Thread structure
+				status = STATUS_BUFFER_TOO_SMALL; 
+				break; 
+			}
+
+
+			ThreadData* data= (ThreadData*)stack->Parameters.DeviceIoControl.Type3InputBuffer; // Extracting our buffer 
+			
+			if (!data) {
+				status = STATUS_INVALID_PARAMETER; 
+				break; 
+			}
+
+			if (data->Priority < 1 || data->Priority > 31) { // Possible values for priority are 1 ... 31 
+				status = STATUS_INVALID_PARAMETER;
+				break;
+			}
+			// Now lets get the pointer to the real thread object in kernel space 
+			PETHREAD Thread; 
+			status = PsLookupThreadByThreadId(UlongToHandle(data->ThreadId) , &Thread); 
+			if (!NT_SUCCESS(status)) {
+				break; // Leave the status like it was from the last return . 
+			}
+
+
+			// Now lets change The priority 
+			KeSetBasePriorityThread((PKTHREAD)Thread, data->Priority); 
+			
+			KdPrint(("Priority change for Thread : %d to %d\n",data->ThreadId , data->Priority)); 
+
+			// We Derefenrence the object After Success
+			ObDereferenceObject(Thread);
+
+			break; 
+
+		default : 
+			status = STATUS_INVALID_DEVICE_REQUEST; 
+			break; 
+	}
+	
+	
+	// Resending informations to client 
+	Irp->IoStatus.Status = status; 
+	Irp->IoStatus.Information = 0; 
+	IoCompleteRequest(Irp, IO_NO_INCREMENT); 
+	
+	return status;
 
 }
 
@@ -83,6 +142,8 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING Regi
 		
 		return STATUS_SUCCESS; 
 }
+
+
 
 void unload(_In_ PDRIVER_OBJECT DriverObject) {
 
