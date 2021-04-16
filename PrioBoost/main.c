@@ -67,7 +67,7 @@ NTSTATUS PriorityBoosterDeviceControl(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIR
 
 
 			// Now lets change The priority 
-			KeSetBasePriorityThread((PKTHREAD)Thread, data->Priority); 
+			KeSetPriorityThread((PKTHREAD)Thread, data->Priority); 
 			
 			KdPrint(("Priority change for Thread : %d to %d\n",data->ThreadId , data->Priority)); 
 
