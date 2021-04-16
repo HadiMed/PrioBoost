@@ -10,12 +10,6 @@
 METHOD_NEITHER , FILE_ANY_ACCESS)
 
 
-//Prototypes
-NTSTATUS PrioBoostCreateClose(_In_ PDEVICE_OBJECT DeviceObject , _In_ PIRP Irp); 
-
-NTSTATUS PriorityBoosterDeviceControl(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIRP Irp);
-
-
 // Declarations
 _Use_decl_annotations_
 NTSTATUS PrioBoostCreateClose(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIRP Irp) {

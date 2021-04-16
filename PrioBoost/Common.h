@@ -7,3 +7,8 @@ typedef struct ThreadData {
 	ULONG ThreadId;
 	int Priority;
 }ThreadData;
+
+//Prototypes
+NTSTATUS PrioBoostCreateClose(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIRP Irp);
+
+NTSTATUS PriorityBoosterDeviceControl(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIRP Irp);
