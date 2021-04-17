@@ -53,28 +53,34 @@ NTSTATUS PriorityBoosterDeviceControl(_In_ PDEVICE_OBJECT DeviceObject, _In_ PIR
 				status = STATUS_INVALID_PARAMETER; 
 				break; 
 			}
+			__try {
 
-			if (data->Priority < 1 || data->Priority > 31) { // Possible values for priority are 1 ... 31 
-				status = STATUS_INVALID_PARAMETER;
+				if (data->Priority < 1 || data->Priority > 31) { // Possible values for priority are 1 ... 31 
+					status = STATUS_INVALID_PARAMETER;
+					break;
+				}
+				// Now lets get the pointer to the real thread object in kernel space 
+				PETHREAD Thread;
+				status = PsLookupThreadByThreadId(UlongToHandle(data->ThreadId), &Thread);
+				if (!NT_SUCCESS(status)) {
+					break; // Leave the status like it was from the last return . 
+				}
+
+
+				// Now lets change The priority 
+				KeSetPriorityThread((PKTHREAD)Thread, data->Priority);
+
+				KdPrint(("Priority change for Thread : %d to %d\n", data->ThreadId, data->Priority));
+
+				// We Derefenrence the object After Success
+				ObDereferenceObject(Thread);
+
 				break;
 			}
-			// Now lets get the pointer to the real thread object in kernel space 
-			PETHREAD Thread; 
-			status = PsLookupThreadByThreadId(UlongToHandle(data->ThreadId) , &Thread); 
-			if (!NT_SUCCESS(status)) {
-				break; // Leave the status like it was from the last return . 
+
+			__except (EXCEPTION_EXECUTE_HANDLER) {
+				status = STATUS_ACCESS_VIOLATION; 
 			}
-
-
-			// Now lets change The priority 
-			KeSetPriorityThread((PKTHREAD)Thread, data->Priority); 
-			
-			KdPrint(("Priority change for Thread : %d to %d\n",data->ThreadId , data->Priority)); 
-
-			// We Derefenrence the object After Success
-			ObDereferenceObject(Thread);
-
-			break; 
 
 		default : 
 			status = STATUS_INVALID_DEVICE_REQUEST; 
